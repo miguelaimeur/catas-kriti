@@ -1,2 +1,2 @@
 # catas-kriti
-WWW.CATASKRITI.COM
+www.catakriti.com
