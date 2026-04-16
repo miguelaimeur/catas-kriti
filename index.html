@@ -1,255 +1,289 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cata PRO</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cata PRO</title>
+  <style>
+    :root {
+      --bg: #111;
+      --panel: #222;
+      --panel-2: #2d2d2d;
+      --text: #fff;
+      --muted: #aaa;
+      --accent: #2ecc71;
+      --accent-dark: #27ae60;
+    }
 
-<style>
-body { font-family: Arial; background:#111; color:#fff; padding:20px; }
-.container { max-width:700px; margin:auto; }
+    * {
+      box-sizing: border-box;
+    }
 
-.card { background:#222; padding:15px; border-radius:10px; margin-top:15px; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px;
+    }
 
-input, textarea, button {
-width:100%; padding:10px; margin-top:5px; border-radius:8px; border:none;
-}
+    .container {
+      max-width: 700px;
+      margin: auto;
+    }
 
-button { background:#2ecc71; color:#000; font-weight:bold; }
+    .card {
+      background: var(--panel);
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 15px;
+    }
 
-.rating { display:flex; flex-wrap:wrap; gap:5px; margin-top:5px; }
+    input,
+    textarea,
+    button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+      border-radius: 8px;
+      border: none;
+      font: inherit;
+    }
 
-.rating button {
-flex:1 0 18%;
-background:#333; color:#fff;
-}
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
 
-.rating button.active { background:#2ecc71; color:#000; }
+    button {
+      background: var(--accent);
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+    }
 
-.small { font-size:0.8em; color:#aaa; }
-</style>
+    button:hover {
+      background: var(--accent-dark);
+    }
+
+    .rating {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 5px;
+    }
+
+    .rating button {
+      flex: 1 0 18%;
+      background: var(--panel-2);
+      color: var(--text);
+      margin-top: 0;
+    }
+
+    .rating button.active {
+      background: var(--accent);
+      color: #000;
+    }
+
+    .small {
+      font-size: 0.8em;
+      color: var(--muted);
+    }
+  </style>
 </head>
-
 <body>
-<div class="container">
+  <div class="container">
+    <h1>Cata PRO</h1>
 
-<h1>🌿 Cata PRO</h1>
+    <div class="card" id="fase1">
+      <h2>Fase 1</h2>
+      <input id="nombre" placeholder="Tu nombre">
+      <input id="variedad" placeholder="Variedad">
+      <input id="precio" type="number" min="0" step="0.01" placeholder="Precio (â‚¬)">
+      <button type="button" onclick="iniciar()">Empezar cata</button>
+    </div>
 
-<div class="card" id="fase1">
-<h2>Fase 1</h2>
-<input id="nombre" placeholder="Tu nombre">
-<input id="variedad" placeholder="Variedad">
-<input id="precio" type="number" placeholder="Precio (€)">
-<button onclick="iniciar()">Empezar cata</button>
-</div>
+    <div class="card" id="fase2" style="display:none;">
+      <h2>Fase 2</h2>
+      <div id="criterios"></div>
+      <textarea id="comentarios" placeholder="Notas..."></textarea>
+      <h3>Nota final: <span id="notaFinal">0.00</span></h3>
+      <button type="button" onclick="guardar()">Guardar cata</button>
+    </div>
 
-<div class="card" id="fase2" style="display:none;">
-<h2>Fase 2</h2>
-<div id="criterios"></div>
+    <h2>Historial</h2>
+    <div id="historial"></div>
+  </div>
 
-<textarea id="comentarios" placeholder="Notas..."></textarea>
+  <script>
+    const pesos = {
+      "Aspecto": 1,
+      "Olor": 1.5,
+      "Olor tras grinder": 1.5,
+      "Sabor": 2,
+      "Punch": 2,
+      "Pegada": 2,
+      "Efecto": 2
+    };
 
-<h3>Nota final: <span id="notaFinal">0</span></h3>
+    const criteriosLista = [
+      ["Aspecto", "Visual, tricomas, calidad general"],
+      ["Olor", "Aroma en crudo"],
+      ["Olor tras grinder", "Aroma al triturar"],
+      ["Sabor", "Sabor al fumar"],
+      ["Punch", "Potencia inmediata"],
+      ["Pegada", "Efecto posterior"],
+      ["Efecto", "DuraciÃ³n del efecto"]
+    ];
 
-<button onclick="guardar()">Guardar cata</button>
-</div>
+    let puntuaciones = {};
+    let catas = JSON.parse(localStorage.getItem("catas")) || [];
 
-<h2>📊 Historial</h2>
-<div id="historial"></div>
+    const fase1 = document.getElementById("fase1");
+    const fase2 = document.getElementById("fase2");
+    const criteriosDiv = document.getElementById("criterios");
+    const historialDiv = document.getElementById("historial");
+    const nombreInput = document.getElementById("nombre");
+    const variedadInput = document.getElementById("variedad");
+    const precioInput = document.getElementById("precio");
+    const comentariosInput = document.getElementById("comentarios");
+    const notaFinalSpan = document.getElementById("notaFinal");
 
-</div>
+    function crearBotones(contenedor, key) {
+      for (let i = 1; i <= 10; i++) {
+        const boton = document.createElement("button");
+        boton.type = "button";
+        boton.textContent = i;
+        boton.onclick = () => {
+          [...contenedor.children].forEach((item) => item.classList.remove("active"));
+          boton.classList.add("active");
+          puntuaciones[key] = i;
+          calcular();
+        };
+        contenedor.appendChild(boton);
+      }
+    }
 
-<script>
+    function iniciar() {
+      if (!nombreInput.value.trim() || !variedadInput.value.trim()) {
+        alert("Completa nombre y variedad");
+        return;
+      }
 
-const pesos = {
-"Aspecto":1,
-"Olor":1.5,
-"Olor tras grinder":1.5,
-"Sabor":2,
-"Punch":2,
-"Pegada":2,
-"Efecto":2
-};
+      fase1.style.display = "none";
+      fase2.style.display = "block";
+      criteriosDiv.innerHTML = "";
+      puntuaciones = {};
+      notaFinalSpan.textContent = "0.00";
 
-const criteriosLista = [
-["Aspecto","Visual, tricomas, calidad general"],
-["Olor","Aroma en crudo"],
-["Olor tras grinder","Aroma al triturar"],
-["Sabor","Sabor al fumar"],
-["Punch","Potencia inmediata"],
-["Pegada","Efecto posterior"],
-["Efecto","Duración del efecto"]
-];
+      criteriosLista.forEach(([nombre, descripcion]) => {
+        const bloque = document.createElement("div");
+        const titulo = document.createElement("h3");
+        const desc = document.createElement("div");
+        const rating = document.createElement("div");
 
-let puntuaciones = {};
-let catas = JSON.parse(localStorage.getItem("catas")) || [];
+        titulo.textContent = nombre;
+        desc.className = "small";
+        desc.textContent = descripcion;
+        rating.className = "rating";
 
-// referencias DOM seguras
-const fase1 = document.getElementById("fase1");
-const fase2 = document.getElementById("fase2");
-const criteriosDiv = document.getElementById("criterios");
-const historialDiv = document.getElementById("historial");
+        bloque.appendChild(titulo);
+        bloque.appendChild(desc);
+        bloque.appendChild(rating);
+        criteriosDiv.appendChild(bloque);
+        crearBotones(rating, nombre);
+      });
+    }
 
-const nombreInput = document.getElementById("nombre");
-const variedadInput = document.getElementById("variedad");
-const precioInput = document.getElementById("precio");
-const comentariosInput = document.getElementById("comentarios");
-const notaFinalSpan = document.getElementById("notaFinal");
+    function calcular() {
+      let total = 0;
+      let pesoTotal = 0;
 
-// crear botones
-function crearBotones(contenedor, key){
-for(let i=1;i<=10;i++){
-let b=document.createElement("button");
-b.textContent=i;
+      for (const criterio in puntuaciones) {
+        total += puntuaciones[criterio] * pesos[criterio];
+        pesoTotal += pesos[criterio];
+      }
 
-b.onclick=()=>{
-[...contenedor.children].forEach(x=>x.classList.remove("active"));
-b.classList.add("active");
-puntuaciones[key]=i;
-calcular();
-};
+      if (pesoTotal === 0) {
+        return 0;
+      }
 
-contenedor.appendChild(b);
-}
-}
+      const nota = (total / pesoTotal).toFixed(2);
+      notaFinalSpan.textContent = nota;
+      return nota;
+    }
 
-// iniciar fase 2
-function iniciar(){
-if(!nombreInput.value || !variedadInput.value){
-alert("Completa nombre y variedad");
-return;
-}
+    function guardar() {
+      if (Object.keys(puntuaciones).length !== criteriosLista.length) {
+        alert("Completa todas las puntuaciones");
+        return;
+      }
 
-fase1.style.display="none";
-fase2.style.display="block";
-criteriosDiv.innerHTML="";
-puntuaciones={};
+      const nota = calcular();
 
-criteriosLista.forEach(c=>{
-let bloque=document.createElement("div");
+      if (catas.some((cata) => cata.nota === nota)) {
+        alert("No puedes repetir nota final");
+        return;
+      }
 
-let titulo=document.createElement("h3");
-titulo.textContent=c[0];
+      const nueva = {
+        nombre: nombreInput.value.trim(),
+        variedad: variedadInput.value.trim(),
+        precio: precioInput.value,
+        puntos: { ...puntuaciones },
+        nota,
+        comentarios: comentariosInput.value.trim(),
+        fecha: new Date().toLocaleString("es-ES")
+      };
 
-let desc=document.createElement("div");
-desc.className="small";
-desc.textContent=c[1];
+      catas.push(nueva);
+      catas.sort((a, b) => Number(b.nota) - Number(a.nota));
+      localStorage.setItem("catas", JSON.stringify(catas));
+      render();
+      reset();
+    }
 
-let rating=document.createElement("div");
-rating.className="rating";
+    function render() {
+      historialDiv.innerHTML = "";
 
-bloque.appendChild(titulo);
-bloque.appendChild(desc);
-bloque.appendChild(rating);
+      catas.forEach((cata, index) => {
+        const div = document.createElement("div");
+        div.className = "card";
 
-criteriosDiv.appendChild(bloque);
+        const detalle = Object.entries(cata.puntos)
+          .map(([criterio, valor]) => `${criterio}: ${valor}`)
+          .join("<br>");
 
-crearBotones(rating, c[0]);
-});
-}
+        div.innerHTML = `
+          <strong>#${index + 1} ${cata.variedad}</strong><br>
+          Catador: ${cata.nombre}<br>
+          Precio: â‚¬${cata.precio || 0}<br>
+          Nota: ${cata.nota}<br>
+          <details>
+            <summary>Ver detalles</summary>
+            ${detalle}
+            <br><br>${cata.comentarios || ""}
+            <br><br><small>${cata.fecha}</small>
+          </details>
+        `;
 
-// calcular nota
-function calcular(){
-let total=0, pesoTotal=0;
+        historialDiv.appendChild(div);
+      });
+    }
 
-for(let k in puntuaciones){
-total += puntuaciones[k]*pesos[k];
-pesoTotal += pesos[k];
-}
+    function reset() {
+      fase1.style.display = "block";
+      fase2.style.display = "none";
+      criteriosDiv.innerHTML = "";
+      puntuaciones = {};
+      nombreInput.value = "";
+      variedadInput.value = "";
+      precioInput.value = "";
+      comentariosInput.value = "";
+      notaFinalSpan.textContent = "0.00";
+    }
 
-if(pesoTotal===0) return 0;
-
-let nota = (total/pesoTotal).toFixed(2);
-notaFinalSpan.textContent = nota;
-return nota;
-}
-
-// guardar
-function guardar(){
-
-if(Object.keys(puntuaciones).length !== criteriosLista.length){
-alert("Completa todas las puntuaciones");
-return;
-}
-
-let nota = calcular();
-
-// evitar duplicados
-if(catas.some(c=>c.nota == nota)){
-alert("No puedes repetir nota final");
-return;
-}
-
-let nueva = {
-nombre: nombreInput.value,
-variedad: variedadInput.value,
-precio: precioInput.value,
-puntos: {...puntuaciones},
-nota: nota,
-comentarios: comentariosInput.value,
-fecha: new Date().toLocaleString()
-};
-
-catas.push(nueva);
-
-// ordenar ranking
-catas.sort((a,b)=>b.nota-a.nota);
-
-localStorage.setItem("catas", JSON.stringify(catas));
-
-render();
-reset();
-}
-
-// render historial
-function render(){
-historialDiv.innerHTML="";
-
-catas.forEach((c,i)=>{
-let div=document.createElement("div");
-div.className="card";
-
-let detalle="";
-for(let k in c.puntos){
-detalle += `${k}: ${c.puntos[k]}<br>`;
-}
-
-div.innerHTML=`
-<strong>#${i+1} ${c.variedad}</strong><br>
-Catador: ${c.nombre}<br>
-Precio: €${c.precio}<br>
-Nota: ${c.nota}<br>
-
-<details>
-<summary>Ver detalles</summary>
-${detalle}
-<br><br>${c.comentarios || ""}
-<br><br><small>${c.fecha}</small>
-</details>
-`;
-
-historialDiv.appendChild(div);
-});
-}
-
-// reset
-function reset(){
-fase1.style.display="block";
-fase2.style.display="none";
-
-criteriosDiv.innerHTML="";
-puntuaciones={};
-
-nombreInput.value="";
-variedadInput.value="";
-precioInput.value="";
-comentariosInput.value="";
-notaFinalSpan.textContent="0";
-}
-
-// cargar historial al abrir
-render();
-
-</script>
+    render();
+  </script>
 </body>
 </html>
