@@ -3,35 +3,41 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cata PRO</title>
+<title>Cata PRO - Sistema de Registro</title>
 
 <style>
-body { font-family: Arial; background:#111; color:#fff; padding:20px; }
-.container { max-width:700px; margin:auto; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background:#111; color:#fff; padding:20px; line-height: 1.6; }
+    .container { max-width:700px; margin:auto; }
+    .card { background:#222; padding:20px; border-radius:12px; margin-top:15px; border: 1px solid #333; }
+    
+    h1 { text-align: center; color: #2ecc71; }
+    h2 { border-bottom: 2px solid #2ecc71; padding-bottom: 5px; margin-top: 0; }
 
-.card { background:#222; padding:15px; border-radius:10px; margin-top:15px; }
+    input, textarea, button {
+        width:100%; padding:12px; margin-top:10px; border-radius:8px; border:none; box-sizing: border-box;
+    }
 
-input, textarea, button {
-width:100%; padding:10px; margin-top:5px; border-radius:8px; border:none;
-}
+    input, textarea { background: #333; color: #fff; border: 1px solid #444; }
+    button { background:#2ecc71; color:#000; font-weight:bold; cursor: pointer; transition: 0.3s; }
+    button:hover { background: #27ae60; transform: translateY(-2px); }
 
-button { background:#2ecc71; color:#000; font-weight:bold; }
+    .rating { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .rating button {
+        flex:1 0 15%;
+        background:#444; color:#fff; padding: 8px; margin-top: 0;
+    }
+    .rating button.active { background:#2ecc71; color:#000; }
 
-.rating { display:flex; flex-wrap:wrap; gap:5px; margin-top:5px; }
+    .small { font-size:0.85em; color:#bbb; margin-top: 4px; }
+    .nota-destacada { font-size: 1.5em; color: #2ecc71; font-weight: bold; }
 
-.rating button {
-flex:1 0 18%;
-background:#333; color:#fff;
-}
+    .status { margin-top:15px; padding:12px; border-radius:8px; display:none; text-align: center; }
+    .status.success { background:#2ecc71; color:#000; }
+    .status.error { background:#e74c3c; color:#fff; }
+    .status.show { display:block; }
 
-.rating button.active { background:#2ecc71; color:#000; }
-
-.small { font-size:0.8em; color:#aaa; }
-
-.status { margin-top:10px; padding:10px; border-radius:8px; display:none; }
-.status.success { background:#2ecc71; color:#000; }
-.status.error { background:#e74c3c; color:#fff; }
-.status.show { display:block; }
+    details { background: #2a2a2a; padding: 10px; border-radius: 8px; margin-top: 10px; cursor: pointer; }
+    summary { font-weight: bold; color: #2ecc71; }
 </style>
 </head>
 
@@ -40,252 +46,219 @@ background:#333; color:#fff;
 
 <h1>🌿 Cata PRO</h1>
 
-<div class="card" id="fase1" style="display: block;">
-<h2>Fase 1</h2>
-<input id="nombre" placeholder="Tu nombre">
-<input id="variedad" placeholder="Variedad">
-<input id="precio" type="number" placeholder="Precio (€)">
-<button onclick="iniciar()">Empezar cata</button>
+<div class="card" id="fase1">
+    <h2>Paso 1: Información</h2>
+    <input id="nombre" placeholder="Tu nombre / Catador">
+    <input id="variedad" placeholder="Nombre de la Variedad">
+    <input id="precio" type="number" placeholder="Precio (€)">
+    <button onclick="iniciar()">Empezar cata</button>
 </div>
 
 <div class="card" id="fase2" style="display: none;">
-<h2>Fase 2</h2>
-<div id="criterios"></div>
+    <h2>Paso 2: Evaluación</h2>
+    <div id="criterios"></div>
 
-<textarea id="comentarios" placeholder="Notas..."></textarea>
+    <div style="margin-top:20px;">
+        <h3>Comentarios adicionales</h3>
+        <textarea id="comentarios" rows="3" placeholder="Notas sobre el sabor, ceniza, curado..."></textarea>
+    </div>
 
-<h3>Nota final: <span id="notaFinal">0</span></h3>
+    <div class="card" style="text-align: center; background: #1a1a1a;">
+        <span>Nota Final Estimada:</span><br>
+        <span id="notaFinal" class="nota-destacada">0.00</span>
+    </div>
 
-<button onclick="guardar()">Guardar cata</button>
-<div id="status" class="status"></div>
+    <button onclick="guardar()">Finalizar y Guardar</button>
+    <div id="status" class="status"></div>
 </div>
 
-<h2>📊 Historial</h2>
+<h2>📊 Historial Reciente</h2>
 <div id="historial"></div>
 
 </div>
 
 <script>
-
-// URL de Google Apps Script
-const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbyfGQNX05gQbj0DI6OXGcuLBprjDd9FnwjsukfItYIKdSr37dQzBMeBFb8VSyNn28mW0w/exec";
+// URL actualizada con el ID proporcionado
+const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycby-B3ZCmG9PuUzXzPOuygQgrC5OE8LGzZCj4bEZbZmCCsCc3LktODFo1ycyZ3bFpOkD3A/exec";
 
 const pesos = {
-"Aspecto":1,
-"Olor":1.5,
-"Olor tras grinder":1.5,
-"Sabor":2,
-"Punch":2,
-"Pegada":2,
-"Efecto":2
+    "Aspecto": 1,
+    "Olor": 1.5,
+    "Olor tras grinder": 1.5,
+    "Sabor": 2,
+    "Punch": 2,
+    "Pegada": 2,
+    "Efecto": 2
 };
 
 const criteriosLista = [
-["Aspecto","Visual, tricomas, calidad general"],
-["Olor","Aroma en crudo"],
-["Olor tras grinder","Aroma al triturar"],
-["Sabor","Sabor al fumar"],
-["Punch","Potencia inmediata"],
-["Pegada","Efecto posterior"],
-["Efecto","Duración del efecto"]
+    ["Aspecto", "Visual, resina, densidad de tricomas"],
+    ["Olor", "Intensidad y perfil aromático en seco"],
+    ["Olor tras grinder", "Explosión de aromas al picar"],
+    ["Sabor", "Fidelidad al olor y limpieza en boca"],
+    ["Punch", "Rapidez del primer impacto"],
+    ["Pegada", "Potencia máxima alcanzada"],
+    ["Efecto", "Calidad y duración de la experiencia"]
 ];
 
 let puntuaciones = {};
 let catas = JSON.parse(localStorage.getItem("catas")) || [];
 
-// referencias DOM seguras
+// Elementos DOM
 const fase1 = document.getElementById("fase1");
 const fase2 = document.getElementById("fase2");
 const criteriosDiv = document.getElementById("criterios");
 const historialDiv = document.getElementById("historial");
-
-const nombreInput = document.getElementById("nombre");
-const variedadInput = document.getElementById("variedad");
-const precioInput = document.getElementById("precio");
-const comentariosInput = document.getElementById("comentarios");
-const notaFinalSpan = document.getElementById("notaFinal");
 const statusDiv = document.getElementById("status");
 
-// crear botones
-function crearBotones(contenedor, key){
-for(let i=1;i<=10;i++){
-let b=document.createElement("button");
-b.textContent=i;
-
-b.onclick=()=>{
-[...contenedor.children].forEach(x=>x.classList.remove("active"));
-b.classList.add("active");
-puntuaciones[key]=i;
-calcular();
-};
-
-contenedor.appendChild(b);
-}
+function mostrarStatus(mensaje, tipo) {
+    statusDiv.textContent = mensaje;
+    statusDiv.className = "status show " + tipo;
 }
 
-// iniciar fase 2
-function iniciar(){
-if(!nombreInput.value || !variedadInput.value){
-alert("Completa nombre y variedad");
-return;
+function iniciar() {
+    const nombre = document.getElementById("nombre").value;
+    const variedad = document.getElementById("variedad").value;
+    
+    if(!nombre || !variedad) {
+        alert("Por favor, rellena el nombre y la variedad.");
+        return;
+    }
+
+    fase1.style.display = "none";
+    fase2.style.display = "block";
+    criteriosDiv.innerHTML = "";
+    puntuaciones = {};
+
+    criteriosLista.forEach(c => {
+        let bloque = document.createElement("div");
+        bloque.style.marginBottom = "15px";
+
+        let titulo = document.createElement("h3");
+        titulo.style.margin = "10px 0 0 0";
+        titulo.textContent = c[0];
+
+        let desc = document.createElement("div");
+        desc.className = "small";
+        desc.textContent = c[1];
+
+        let rating = document.createElement("div");
+        rating.className = "rating";
+
+        for(let i=1; i<=10; i++) {
+            let b = document.createElement("button");
+            b.textContent = i;
+            b.onclick = () => {
+                [...rating.children].forEach(x => x.classList.remove("active"));
+                b.classList.add("active");
+                puntuaciones[c[0]] = i;
+                calcular();
+            };
+            rating.appendChild(b);
+        }
+
+        bloque.appendChild(titulo);
+        bloque.appendChild(desc);
+        bloque.appendChild(rating);
+        criteriosDiv.appendChild(bloque);
+    });
 }
 
-fase1.style.display="none";
-fase2.style.display="block";
-criteriosDiv.innerHTML="";
-puntuaciones={};
-
-criteriosLista.forEach(c=>{
-let bloque=document.createElement("div");
-
-let titulo=document.createElement("h3");
-titulo.textContent=c[0];
-
-let desc=document.createElement("div");
-desc.className="small";
-desc.textContent=c[1];
-
-let rating=document.createElement("div");
-rating.className="rating";
-
-bloque.appendChild(titulo);
-bloque.appendChild(desc);
-bloque.appendChild(rating);
-
-criteriosDiv.appendChild(bloque);
-
-crearBotones(rating, c[0]);
-});
+function calcular() {
+    let total = 0, pesoTotal = 0;
+    for(let k in puntuaciones) {
+        total += puntuaciones[k] * pesos[k];
+        pesoTotal += pesos[k];
+    }
+    let nota = pesoTotal > 0 ? (total / pesoTotal).toFixed(2) : "0.00";
+    document.getElementById("notaFinal").textContent = nota;
+    return nota;
 }
 
-// calcular nota
-function calcular(){
-let total=0, pesoTotal=0;
+function guardar() {
+    if(Object.keys(puntuaciones).length < criteriosLista.length) {
+        alert("Faltan criterios por puntuar.");
+        return;
+    }
 
-for(let k in puntuaciones){
-total += puntuaciones[k]*pesos[k];
-pesoTotal += pesos[k];
+    const nuevaCata = {
+        fecha: new Date().toLocaleString(),
+        nombre: document.getElementById("nombre").value,
+        variedad: document.getElementById("variedad").value,
+        precio: document.getElementById("precio").value || "0",
+        nota: calcular(),
+        comentarios: document.getElementById("comentarios").value,
+        puntos: puntuaciones
+    };
+
+    // 1. Guardar Local
+    catas.unshift(nuevaCata);
+    localStorage.setItem("catas", JSON.stringify(catas));
+
+    // 2. Enviar a Google
+    enviarAGoogle(nuevaCata);
+
+    // 3. UI
+    renderHistorial();
 }
 
-if(pesoTotal===0) return 0;
+function enviarAGoogle(datos) {
+    mostrarStatus("⏳ Enviando a Google Sheets...", "");
 
-let nota = (total/pesoTotal).toFixed(2);
-notaFinalSpan.textContent = nota;
-return nota;
+    // Usamos text/plain para evitar problemas de CORS pre-flight en Google Apps Script
+    fetch(GOOGLE_SHEETS_URL, {
+        method: "POST",
+        mode: "no-cors", 
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify(datos)
+    })
+    .then(() => {
+        mostrarStatus("✅ Guardado con éxito", "success");
+        setTimeout(resetApp, 2000);
+    })
+    .catch(err => {
+        console.error(err);
+        mostrarStatus("❌ Error de red, guardado solo en local", "error");
+    });
 }
 
-// mostrar estado
-function mostrarStatus(mensaje, tipo){
-statusDiv.textContent = mensaje;
-statusDiv.className = "status show " + tipo;
-setTimeout(() => {
-  statusDiv.classList.remove("show");
-}, 3000);
+function renderHistorial() {
+    historialDiv.innerHTML = "";
+    catas.slice(0, 5).forEach((c, index) => {
+        let item = document.createElement("div");
+        item.className = "card";
+        item.style.background = "#1a1a1a";
+        
+        let detallePuntos = "";
+        for(let p in c.puntos) detallePuntos += `<li>${p}: ${c.puntos[p]}</li>`;
+
+        item.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong>${c.variedad}</strong>
+                <span class="nota-destacada" style="font-size:1.1em">${c.nota}</span>
+            </div>
+            <div class="small">Catador: ${c.nombre} | ${c.fecha}</div>
+            <details>
+                <summary>Ver análisis</summary>
+                <ul style="padding-left:20px; font-size:0.9em;">${detallePuntos}</ul>
+                <p style="font-style:italic; font-size:0.9em;">"${c.comentarios || 'Sin comentarios'}"</p>
+            </details>
+        `;
+        historialDiv.appendChild(item);
+    });
 }
 
-// guardar
-function guardar(){
-
-if(Object.keys(puntuaciones).length !== criteriosLista.length){
-alert("Completa todas las puntuaciones");
-return;
+function resetApp() {
+    fase2.style.display = "none";
+    fase1.style.display = "block";
+    document.getElementById("variedad").value = "";
+    document.getElementById("precio").value = "";
+    document.getElementById("comentarios").value = "";
+    statusDiv.className = "status";
 }
 
-let nota = calcular();
-
-let nueva = {
-nombre: nombreInput.value,
-variedad: variedadInput.value,
-precio: precioInput.value,
-puntos: {...puntuaciones},
-nota: nota,
-comentarios: comentariosInput.value,
-fecha: new Date().toLocaleString()
-};
-
-catas.push(nueva);
-
-// Guardar en localStorage
-localStorage.setItem("catas", JSON.stringify(catas));
-
-// Enviar a Google Sheets
-enviarAGoogleSheets(nueva);
-
-render();
-reset();
-}
-
-// enviar a Google Sheets
-function enviarAGoogleSheets(cata){
-mostrarStatus("Guardando...", "");
-
-fetch(GOOGLE_SHEETS_URL, {
-  method: 'POST',
-  mode: 'no-cors',
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify(cata)
-})
-.then(response => {
-  mostrarStatus("✓ Guardado en Google Sheets", "success");
-})
-.catch(error => {
-  console.error("Error al enviar a Google Sheets:", error);
-  mostrarStatus("✓ Guardado localmente (sin conexión a Sheets)", "success");
-});
-}
-
-// render historial
-function render(){
-historialDiv.innerHTML="";
-
-catas.forEach((c,i)=>{
-let div=document.createElement("div");
-div.className="card";
-
-let detalle="";
-for(let k in c.puntos){
-detalle += `${k}: ${c.puntos[k]}<br>`;
-}
-
-div.innerHTML=`
-<strong>#${i+1} ${c.variedad}</strong><br>
-Catador: ${c.nombre}<br>
-Precio: €${c.precio}<br>
-Nota: ${c.nota}<br>
-
-<details>
-<summary>Ver detalles</summary>
-${detalle}
-<br><br>${c.comentarios || ""}
-<br><br><small>${c.fecha}</small>
-</details>
-`;
-
-historialDiv.appendChild(div);
-});
-}
-
-// reset
-function reset(){
-fase1.style.display="block";
-fase2.style.display="none";
-
-criteriosDiv.innerHTML="";
-puntuaciones={};
-
-nombreInput.value="";
-variedadInput.value="";
-precioInput.value="";
-comentariosInput.value="";
-notaFinalSpan.textContent="0";
-}
-
-// cargar historial al abrir
-render();
-
+// Carga inicial
+renderHistorial();
 </script>
-
 </body>
 </html>
